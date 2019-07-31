@@ -25,6 +25,29 @@ func New(size int) *RingBuffer {
 	}
 }
 
+func (r *RingBuffer) RetrieveAll()  {
+	r.r = 0
+	r.w = 0
+	r.isEmpty = true
+}
+
+
+func (r *RingBuffer) Retrieve(len int)  {
+	if len < r.Length() {
+		r.r = (r.r + len) % r.size
+
+		if r.w == r.r {
+			r.isEmpty = true
+		}
+	} else {
+		r.RetrieveAll()
+	}
+}
+
+func (r *RingBuffer) debug() []byte {
+	return  r.buf
+}
+
 // Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
 // When Read encounters an error or end-of-file condition after successfully reading n > 0 bytes, it returns the number of bytes read. It may return the (non-nil) error from the same call or return the error (and n == 0) from a subsequent call.
 // Callers should always process the n > 0 bytes returned before considering the error err. Doing so correctly handles I/O errors that happen after reading some bytes and also both of the allowed EOF behaviors.
@@ -113,7 +136,7 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 		} else {
 			copy(r.buf[r.w:], p[:c1])
 			c2 := n - c1
-			copy(r.buf[0:], p[c1+1:])
+			copy(r.buf[0:], p[c1:])
 			r.w = c2
 		}
 	} else {

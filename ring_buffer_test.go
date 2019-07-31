@@ -33,8 +33,48 @@ func TestRingBuffer_Write(t *testing.T) {
 		t.Fatalf("expect free 64 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
 	}
 
+	// check retrieve
+	n, err := rb.Write([]byte(strings.Repeat("abcd", 2)))
+	if err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	if n != 8 {
+		t.Fatalf("expect write 4 bytes but got %d", n)
+	}
+	if bytes.Compare(rb.Bytes(), []byte(strings.Repeat("abcd", 2))) != 0 {
+		t.Fatalf("expect 8 abcdabcd but got %s. r.w=%d, r.r=%d", rb.Bytes(), rb.w, rb.r)
+	}
+	rb.Retrieve(5)
+	if rb.Length() != 3 {
+		t.Fatalf("expect len 1 bytes but got %d. r.w=%d, r.r=%d", rb.Length(), rb.w, rb.r)
+	}
+	if rb.Free() != 61 {
+		t.Fatalf("expect free 61 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
+	}
+	if bytes.Compare(rb.Bytes(), []byte(strings.Repeat("bcd", 1))) != 0 {
+		t.Fatalf("expect 1 bcd but got %s. r.w=%d, r.r=%d", rb.Bytes(), rb.w, rb.r)
+	}
+	_, err = rb.Write([]byte(strings.Repeat("abcd", 15)))
+	if err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	if rb.Capacity() != 64 {
+		t.Fatalf("expect capacity 64 bytes but got %d. r.w=%d, r.r=%d", rb.Capacity(), rb.w, rb.r)
+	}
+	if rb.Length() != 63 {
+		t.Fatalf("expect len 63 bytes but got %d. r.w=%d, r.r=%d", rb.Length(), rb.w, rb.r)
+	}
+	if rb.Free() != 1 {
+		t.Fatalf("expect free 1 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
+	}
+	if bytes.Compare(rb.Bytes(), []byte("bcd" + strings.Repeat("abcd", 15))) != 0 {
+		t.Fatalf("expect 63 ... but got %s. buf %s. r.w=%d, r.r=%d", rb.Bytes(), rb.debug(), rb.w, rb.r)
+	}
+	rb.RetrieveAll()
+
+
 	// write 4 * 4 = 16 bytes
-	n, err := rb.Write([]byte(strings.Repeat("abcd", 4)))
+	n, err = rb.Write([]byte(strings.Repeat("abcd", 4)))
 	if err != nil {
 		t.Fatalf("write failed: %v", err)
 	}
