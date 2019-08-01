@@ -25,14 +25,17 @@ func New(size int) *RingBuffer {
 	}
 }
 
-func (r *RingBuffer) RetrieveAll()  {
+func (r *RingBuffer) RetrieveAll() {
 	r.r = 0
 	r.w = 0
 	r.isEmpty = true
 }
 
+func (r *RingBuffer) Retrieve(len int) {
+	if len <= 0 {
+		return
+	}
 
-func (r *RingBuffer) Retrieve(len int)  {
 	if len < r.Length() {
 		r.r = (r.r + len) % r.size
 
@@ -45,7 +48,59 @@ func (r *RingBuffer) Retrieve(len int)  {
 }
 
 func (r *RingBuffer) debug() []byte {
-	return  r.buf
+	return r.buf
+}
+
+func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
+	if len <= 0 {
+		return
+	}
+
+	if r.w > r.r {
+		n := r.w - r.r // Length
+		if n > len {
+			n = len
+		}
+
+		first = r.buf[r.r : r.r+n]
+		return
+	}
+
+	n := r.size - r.r + r.w // Length
+	if n > len {
+		n = len
+	}
+
+	if r.r+n <= r.size {
+		first = r.buf[r.r : r.r+n]
+	} else {
+		c1 := r.size - r.r
+		first = r.buf[r.r:r.size]
+		c2 := n - c1
+		end = r.buf[0:c2]
+	}
+
+	return
+}
+
+func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
+	if r.w > r.r {
+		n := r.w - r.r // Length
+		first = r.buf[r.r : r.r+n]
+		return
+	}
+
+	n := r.size - r.r + r.w // Length
+	if r.r+n <= r.size {
+		first = r.buf[r.r : r.r+n]
+	} else {
+		c1 := r.size - r.r
+		first = r.buf[r.r:r.size]
+		c2 := n - c1
+		end = r.buf[0:c2]
+	}
+
+	return
 }
 
 // Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.

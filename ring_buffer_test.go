@@ -67,11 +67,10 @@ func TestRingBuffer_Write(t *testing.T) {
 	if rb.Free() != 1 {
 		t.Fatalf("expect free 1 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
 	}
-	if bytes.Compare(rb.Bytes(), []byte("bcd" + strings.Repeat("abcd", 15))) != 0 {
+	if bytes.Compare(rb.Bytes(), []byte("bcd"+strings.Repeat("abcd", 15))) != 0 {
 		t.Fatalf("expect 63 ... but got %s. buf %s. r.w=%d, r.r=%d", rb.Bytes(), rb.debug(), rb.w, rb.r)
 	}
 	rb.RetrieveAll()
-
 
 	// write 4 * 4 = 16 bytes
 	n, err = rb.Write([]byte(strings.Repeat("abcd", 4)))
@@ -251,6 +250,79 @@ func TestRingBuffer_Read(t *testing.T) {
 		t.Fatalf("expect r.r=16 but got %d. r.w=%d", rb.r, rb.w)
 	}
 
+}
+
+func TestRingBuffer_Peek(t *testing.T) {
+	rb := New(16)
+
+	buf := make([]byte, 8)
+	// write 16 bytes to read
+	rb.Write([]byte(strings.Repeat("abcd", 4)))
+	n, err := rb.Read(buf)
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if n != 8 {
+		t.Fatalf("expect read 8 bytes but got %d", n)
+	}
+	if rb.Length() != 8 {
+		t.Fatalf("expect len 8 bytes but got %d. r.w=%d, r.r=%d, r.isEmpy=%t", rb.Length(), rb.w, rb.r, rb.isEmpty)
+	}
+	if rb.Free() != 8 {
+		t.Fatalf("expect free 0 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
+	}
+	if rb.r != 8 {
+		t.Fatalf("expect r.r=8 but got %d. r.w=%d", rb.r, rb.w)
+	}
+
+	first, end := rb.Peek(4)
+	if len(first) != 4 {
+		t.Fatalf("expect len 4 bytes but got %d", len(first))
+	}
+	if len(end) != 0 {
+		t.Fatalf("expect len 0 bytes but got %d", len(end))
+	}
+	if bytes.Compare(first, []byte(strings.Repeat("abcd", 1))) != 0 {
+		t.Fatalf("expect abcd but got %s. r.w=%d, r.r=%d", first, rb.w, rb.r)
+	}
+
+	rb.Write([]byte("1234"))
+	first, end = rb.Peek(10)
+	if len(first) != 8 {
+		t.Fatalf("expect len 8 bytes but got %d", len(first))
+	}
+	if len(end) != 2 {
+		t.Fatalf("expect len 2 bytes but got %d", len(end))
+	}
+	if bytes.Compare(first, []byte(strings.Repeat("abcd", 2))) != 0 {
+		t.Fatalf("expect abcdabcd but got %s. r.w=%d, r.r=%d", first, rb.w, rb.r)
+	}
+	if bytes.Compare(end, []byte(strings.Repeat("12", 1))) != 0 {
+		t.Fatalf("expect 12 but got %s. r.w=%d, r.r=%d", end, rb.w, rb.r)
+	}
+
+	if bytes.Compare(rb.Bytes(), []byte("abcdabcd1234")) != 0 {
+		t.Fatalf("expect abcdabcd1234 but got %s. r.w=%d, r.r=%d", rb.Bytes(), rb.w, rb.r)
+	}
+
+	first, end = rb.PeekAll()
+	if len(first) != 8 {
+		t.Fatalf("expect len 8 bytes but got %d", len(first))
+	}
+	if len(end) != 4 {
+		t.Fatalf("expect len 4 bytes but got %d", len(end))
+	}
+	if bytes.Compare(first, []byte(strings.Repeat("abcd", 2))) != 0 {
+		t.Fatalf("expect abcdabcd but got %s. r.w=%d, r.r=%d", first, rb.w, rb.r)
+	}
+	if bytes.Compare(end, []byte(strings.Repeat("1234", 1))) != 0 {
+		t.Fatalf("expect 1234 but got %s. r.w=%d, r.r=%d", end, rb.w, rb.r)
+	}
+
+	rb.Retrieve(10)
+	if bytes.Compare(rb.Bytes(), []byte("34")) != 0 {
+		t.Fatalf("expect 34 but got %s. r.w=%d, r.r=%d", rb.Bytes(), rb.w, rb.r)
+	}
 }
 
 func TestRingBuffer_ByteInterface(t *testing.T) {
