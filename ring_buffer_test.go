@@ -68,7 +68,7 @@ func TestRingBuffer_Write(t *testing.T) {
 		t.Fatalf("expect free 1 bytes but got %d. r.w=%d, r.r=%d", rb.Free(), rb.w, rb.r)
 	}
 	if bytes.Compare(rb.Bytes(), []byte("bcd"+strings.Repeat("abcd", 15))) != 0 {
-		t.Fatalf("expect 63 ... but got %s. buf %s. r.w=%d, r.r=%d", rb.Bytes(), rb.debug(), rb.w, rb.r)
+		t.Fatalf("expect 63 ... but got %s. buf %s. r.w=%d, r.r=%d", rb.Bytes(), rb.buf, rb.w, rb.r)
 	}
 	rb.RetrieveAll()
 

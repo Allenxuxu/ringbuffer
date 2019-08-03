@@ -47,11 +47,11 @@ func (r *RingBuffer) Retrieve(len int) {
 	}
 }
 
-func (r *RingBuffer) debug() []byte {
-	return r.buf
-}
-
 func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
+	if r.isEmpty {
+		return
+	}
+
 	if len <= 0 {
 		return
 	}
@@ -84,6 +84,10 @@ func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
 }
 
 func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
+	if r.isEmpty {
+		return
+	}
+
 	if r.w > r.r {
 		n := r.w - r.r // Length
 		first = r.buf[r.r : r.r+n]
