@@ -469,3 +469,55 @@ func TestRingBuffer_ByteInterface(t *testing.T) {
 		t.Fatalf("expect IsFull is false but got true")
 	}
 }
+
+func TestNewWithData(t *testing.T) {
+	buf := []byte("test")
+	rBuf := NewWithData(buf)
+
+	if !rBuf.IsFull() {
+		t.Fatal()
+	}
+	if rBuf.IsEmpty() {
+		t.Fatal()
+	}
+	if rBuf.Capacity() != len(buf) {
+		t.Fatal()
+	}
+	if rBuf.Length() != len(buf) {
+		t.Fatal()
+	}
+	if rBuf.Free() != 0 {
+		t.Fatal()
+	}
+
+	if bytes.Compare(rBuf.Bytes(), buf) != 0 {
+		t.Fatal()
+	}
+	first, _ := rBuf.PeekAll()
+	if bytes.Compare(first, buf) != 0 {
+		t.Fatal()
+	}
+
+	readBuf := make([]byte, 2*len(buf))
+	n, err := rBuf.Read(readBuf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != len(buf) {
+		t.Fatal()
+	}
+	if bytes.Compare(readBuf[:n], buf) != 0 {
+		t.Fatal()
+	}
+
+	n, err = rBuf.Write([]byte("1234567890"))
+	if err != nil {
+		t.Fatal()
+	}
+	if n != 10 {
+		t.Fatal()
+	}
+	if rBuf.Length() != 10 {
+		t.Fatal()
+	}
+}

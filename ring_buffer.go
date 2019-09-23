@@ -25,6 +25,17 @@ func New(size int) *RingBuffer {
 	}
 }
 
+// NewWithData 特殊场景使用，RingBuffer 会持有data，不会自己申请内存去拷贝
+func NewWithData(data []byte) *RingBuffer {
+	return &RingBuffer{
+		buf:     data,
+		size:    len(data),
+		r:       0,
+		w:       0,
+		isEmpty: false,
+	}
+}
+
 func (r *RingBuffer) RetrieveAll() {
 	r.r = 0
 	r.w = 0
