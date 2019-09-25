@@ -73,10 +73,6 @@ func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
 		return
 	}
 
-	if r.w == r.r {
-		first = r.buf[r.r:r.size]
-		return
-	}
 	if len >= r.size-r.r+r.w {
 		len = r.size - r.r + r.w
 	}
@@ -100,11 +96,7 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 		first = r.buf[r.r:r.w]
 		return
 	}
-	if r.w == r.r {
-		first = r.buf[r.r:r.size]
-		end = r.buf[0:r.r]
-		return
-	}
+
 	first = r.buf[r.r:r.size]
 	end = r.buf[0:r.w]
 	return
