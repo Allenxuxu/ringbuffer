@@ -73,7 +73,7 @@ func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
 		return
 	}
 
-	if len >= r.size-r.r+r.w {
+	if len > r.size-r.r+r.w {
 		len = r.size - r.r + r.w
 	}
 	if r.r+len <= r.size {
@@ -125,7 +125,7 @@ func (r *RingBuffer) Read(p []byte) (n int, err error) {
 		}
 		return
 	}
-	if n >= r.size-r.r+r.w {
+	if n > r.size-r.r+r.w {
 		n = r.size - r.r + r.w
 	}
 	if r.r+n <= r.size {
@@ -218,15 +218,17 @@ func (r *RingBuffer) WriteByte(c byte) error {
 
 // Length return the length of available read bytes.
 func (r *RingBuffer) Length() int {
-	if r.isEmpty {
-		return 0
-	}
 	if r.w == r.r {
+		if r.isEmpty {
+			return 0
+		}
 		return r.size
 	}
+
 	if r.w > r.r {
 		return r.w - r.r
 	}
+
 	return r.size - r.r + r.w
 }
 
@@ -237,15 +239,17 @@ func (r *RingBuffer) Capacity() int {
 
 // Free returns the length of available bytes to write.
 func (r *RingBuffer) Free() int {
-	if r.isEmpty {
-		return r.size
-	}
 	if r.w == r.r {
+		if r.isEmpty {
+			return r.size
+		}
 		return 0
 	}
+
 	if r.w < r.r {
 		return r.r - r.w
 	}
+
 	return r.size - r.w + r.r
 }
 
@@ -256,19 +260,21 @@ func (r *RingBuffer) WriteString(s string) (n int, err error) {
 
 // Bytes returns all available read bytes. It does not move the read pointer and only copy the available data.
 func (r *RingBuffer) Bytes() (buf []byte) {
-	if r.isEmpty {
-		return
-	}
 	if r.w == r.r {
-		buf = make([]byte, r.size)
-		copy(buf, r.buf)
+		if !r.isEmpty {
+			buf := make([]byte, r.size)
+			copy(buf, r.buf)
+			return buf
+		}
 		return
 	}
+
 	if r.w > r.r {
 		buf = make([]byte, r.w-r.r)
 		copy(buf, r.buf[r.r:r.w])
 		return
 	}
+
 	buf = make([]byte, r.size-r.r+r.w)
 	copy(buf, r.buf[r.r:r.size])
 	copy(buf[r.size-r.r:], r.buf[0:r.w])
