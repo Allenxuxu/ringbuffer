@@ -255,7 +255,9 @@ func (r *RingBuffer) Free() int {
 
 // WriteString writes the contents of the string s to buffer, which accepts a slice of bytes.
 func (r *RingBuffer) WriteString(s string) (n int, err error) {
-	return r.Write(*(*[]byte)(unsafe.Pointer(&s)))
+	x := (*[2]uintptr)(unsafe.Pointer(&s))
+	h := [3]uintptr{x[0], x[1], x[1]}
+	return r.Write(*(*[]byte)(unsafe.Pointer(&h)))
 }
 
 // Bytes returns all available read bytes. It does not move the read pointer and only copy the available data.
