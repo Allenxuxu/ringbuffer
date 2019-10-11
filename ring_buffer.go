@@ -2,6 +2,7 @@ package ringbuffer
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -43,7 +44,7 @@ func (r *RingBuffer) RetrieveAll() {
 }
 
 func (r *RingBuffer) Retrieve(len int) {
-	if len <= 0 {
+	if r.isEmpty || len <= 0 {
 		return
 	}
 
@@ -59,38 +60,30 @@ func (r *RingBuffer) Retrieve(len int) {
 }
 
 func (r *RingBuffer) Peek(len int) (first []byte, end []byte) {
-	if r.isEmpty {
-		return
-	}
-
-	if len <= 0 {
+	if r.isEmpty || len <= 0 {
 		return
 	}
 
 	if r.w > r.r {
-		n := r.w - r.r // Length
-		if n > len {
-			n = len
+		if len > r.w-r.r {
+			len = r.w - r.r
 		}
 
-		first = r.buf[r.r : r.r+n]
+		first = r.buf[r.r : r.r+len]
 		return
 	}
 
-	n := r.size - r.r + r.w // Length
-	if n > len {
-		n = len
+	if len > r.size-r.r+r.w {
+		len = r.size - r.r + r.w
 	}
-
-	if r.r+n <= r.size {
-		first = r.buf[r.r : r.r+n]
+	if r.r+len <= r.size {
+		first = r.buf[r.r : r.r+len]
 	} else {
-		c1 := r.size - r.r
+		// head
 		first = r.buf[r.r:r.size]
-		c2 := n - c1
-		end = r.buf[0:c2]
+		// tail
+		end = r.buf[0 : len-r.size+r.r]
 	}
-
 	return
 }
 
@@ -100,21 +93,12 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	}
 
 	if r.w > r.r {
-		n := r.w - r.r // Length
-		first = r.buf[r.r : r.r+n]
+		first = r.buf[r.r:r.w]
 		return
 	}
 
-	n := r.size - r.r + r.w // Length
-	if r.r+n <= r.size {
-		first = r.buf[r.r : r.r+n]
-	} else {
-		c1 := r.size - r.r
-		first = r.buf[r.r:r.size]
-		c2 := n - c1
-		end = r.buf[0:c2]
-	}
-
+	first = r.buf[r.r:r.size]
+	end = r.buf[0:r.w]
 	return
 }
 
@@ -125,44 +109,40 @@ func (r *RingBuffer) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-
 	if r.isEmpty {
 		return 0, ErrIsEmpty
 	}
-
+	n = len(p)
 	if r.w > r.r {
-		n = r.w - r.r
-		if n > len(p) {
-			n = len(p)
+		if n > r.w-r.r {
+			n = r.w - r.r
 		}
 		copy(p, r.buf[r.r:r.r+n])
+		// move readPtr
 		r.r = (r.r + n) % r.size
-
-		if r.w == r.r {
+		if r.r == r.w {
 			r.isEmpty = true
 		}
 		return
 	}
-
-	n = r.size - r.r + r.w
-	if n > len(p) {
-		n = len(p)
+	if n > r.size-r.r+r.w {
+		n = r.size - r.r + r.w
 	}
-
 	if r.r+n <= r.size {
 		copy(p, r.buf[r.r:r.r+n])
 	} else {
-		c1 := r.size - r.r
+		// head
 		copy(p, r.buf[r.r:r.size])
-		c2 := n - c1
-		copy(p[c1:], r.buf[0:c2])
+		// tail
+		copy(p[r.size-r.r:], r.buf[0:n-r.size+r.r])
 	}
-	r.r = (r.r + n) % r.size
 
-	if r.w == r.r {
+	// move readPtr
+	r.r = (r.r + n) % r.size
+	if r.r == r.w {
 		r.isEmpty = true
 	}
-	return n, err
+	return
 }
 
 // ReadByte reads and returns the next byte from the input or ErrIsEmpty.
@@ -179,8 +159,7 @@ func (r *RingBuffer) ReadByte() (b byte, err error) {
 	if r.w == r.r {
 		r.isEmpty = true
 	}
-
-	return b, err
+	return
 }
 
 // Write writes len(p) bytes from p to the underlying buf.
@@ -191,23 +170,19 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-
-	free := r.Free()
-	if free < len(p) {
-		r.makeSpace(len(p) - free)
-	}
 	n = len(p)
-
+	free := r.Free()
+	if free < n {
+		r.makeSpace(n - free)
+	}
 	if r.w >= r.r {
-		c1 := r.size - r.w
-		if c1 >= n {
+		if r.size-r.w >= n {
 			copy(r.buf[r.w:], p)
 			r.w += n
 		} else {
-			copy(r.buf[r.w:], p[:c1])
-			c2 := n - c1
-			copy(r.buf[0:], p[c1:])
-			r.w = c2
+			copy(r.buf[r.w:], p[:r.size-r.w])
+			copy(r.buf[0:], p[r.size-r.w:])
+			r.w += n - r.size
 		}
 	} else {
 		copy(r.buf[r.w:], p)
@@ -220,7 +195,7 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 
 	r.isEmpty = false
 
-	return n, err
+	return
 }
 
 // WriteByte writes one byte into buffer, and returns ErrIsFull if buffer is full.
@@ -282,40 +257,30 @@ func (r *RingBuffer) Free() int {
 func (r *RingBuffer) WriteString(s string) (n int, err error) {
 	x := (*[2]uintptr)(unsafe.Pointer(&s))
 	h := [3]uintptr{x[0], x[1], x[1]}
-	buf := *(*[]byte)(unsafe.Pointer(&h))
-	return r.Write(buf)
+	return r.Write(*(*[]byte)(unsafe.Pointer(&h)))
 }
 
 // Bytes returns all available read bytes. It does not move the read pointer and only copy the available data.
-func (r *RingBuffer) Bytes() []byte {
+func (r *RingBuffer) Bytes() (buf []byte) {
 	if r.w == r.r {
 		if !r.isEmpty {
 			buf := make([]byte, r.size)
 			copy(buf, r.buf)
 			return buf
 		}
-		return nil
+		return
 	}
 
 	if r.w > r.r {
-		buf := make([]byte, r.w-r.r)
+		buf = make([]byte, r.w-r.r)
 		copy(buf, r.buf[r.r:r.w])
-		return buf
+		return
 	}
 
-	n := r.size - r.r + r.w
-	buf := make([]byte, n)
-
-	if r.r+n < r.size {
-		copy(buf, r.buf[r.r:r.r+n])
-	} else {
-		c1 := r.size - r.r
-		copy(buf, r.buf[r.r:r.size])
-		c2 := n - c1
-		copy(buf[c1:], r.buf[0:c2])
-	}
-
-	return buf
+	buf = make([]byte, r.size-r.r+r.w)
+	copy(buf, r.buf[r.r:r.size])
+	copy(buf[r.size-r.r:], r.buf[0:r.w])
+	return
 }
 
 // IsFull returns this ringbuffer is full.
@@ -345,4 +310,8 @@ func (r *RingBuffer) makeSpace(len int) {
 	r.r = 0
 	r.size = newSize
 	r.buf = newBuf
+}
+
+func (r *RingBuffer) String() string {
+	return fmt.Sprintf("Ring Buffer: \n\tCap: %d\n\tReadable Bytes: %d\n\tWriteable Bytes: %d\n\tBuffer: %s\n", r.size, r.Length(), r.Free(), r.buf)
 }
