@@ -29,3 +29,8 @@ func main() {
 
 ### 参考
 https://github.com/smallnest/ringbuffer
+
+### 感谢
+
+- [李舒畅](https://github.com/MrChang0)
+- [Harold2017](https://github.com/Harold2017)
