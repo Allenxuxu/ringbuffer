@@ -12,6 +12,7 @@ var ErrIsEmpty = errors.New("ringbuffer is empty")
 type RingBuffer struct {
 	buf     []byte
 	size    int
+	vr      int
 	r       int // next position to read
 	w       int // next position to write
 	isEmpty bool
@@ -102,6 +103,54 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	return
 }
 
+func (r *RingBuffer) VirtualFlush()  {
+	r.r = r.vr
+}
+
+func (r *RingBuffer) VirtualRevert()  {
+	r.vr = r.r
+}
+
+func (r *RingBuffer) VirtualRead (p []byte) (n int, err error)  {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if r.isEmpty {
+		return 0, ErrIsEmpty
+	}
+	n = len(p)
+	if r.w > r.vr {
+		if n > r.w-r.vr {
+			n = r.w - r.vr
+		}
+		copy(p, r.buf[r.vr:r.vr+n])
+		// move vr
+		r.vr = (r.vr + n) % r.size
+		if r.vr == r.w {
+			r.isEmpty = true
+		}
+		return
+	}
+	if n > r.size-r.vr+r.w {
+		n = r.size - r.vr + r.w
+	}
+	if r.vr+n <= r.size {
+		copy(p, r.buf[r.vr:r.vr+n])
+	} else {
+		// head
+		copy(p, r.buf[r.vr:r.size])
+		// tail
+		copy(p[r.size-r.vr:], r.buf[0:n-r.size+r.vr])
+	}
+
+	// move vr
+	r.vr = (r.vr + n) % r.size
+	if r.vr == r.w {
+		r.isEmpty = true
+	}
+	return
+}
+
 // Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
 // When Read encounters an error or end-of-file condition after successfully reading n > 0 bytes, it returns the number of bytes read. It may return the (non-nil) error from the same call or return the error (and n == 0) from a subsequent call.
 // Callers should always process the n > 0 bytes returned before considering the error err. Doing so correctly handles I/O errors that happen after reading some bytes and also both of the allowed EOF behaviors.
@@ -123,6 +172,7 @@ func (r *RingBuffer) Read(p []byte) (n int, err error) {
 		if r.r == r.w {
 			r.isEmpty = true
 		}
+		r.vr = r.r
 		return
 	}
 	if n > r.size-r.r+r.w {
@@ -142,6 +192,7 @@ func (r *RingBuffer) Read(p []byte) (n int, err error) {
 	if r.r == r.w {
 		r.isEmpty = true
 	}
+	r.vr = r.r
 	return
 }
 
@@ -159,6 +210,7 @@ func (r *RingBuffer) ReadByte() (b byte, err error) {
 	if r.w == r.r {
 		r.isEmpty = true
 	}
+	r.vr = r.r
 	return
 }
 

@@ -521,3 +521,52 @@ func TestNewWithData(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+func TestRingBuffer_VirtualRead(t *testing.T) {
+	rb := New(10)
+
+	_, err := rb.Write([]byte("abcd1234"))
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	buf := make([]byte, 4)
+	_, err = rb.Read(buf)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	if !bytes.Equal(buf, []byte("abcd")) {
+		t.Fatal()
+	}
+
+	buf = make([]byte, 2)
+	_, err = rb.VirtualRead(buf)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	if !bytes.Equal(buf, []byte("12")) {
+		t.Fatal()
+	}
+	if rb.Length() != 4 {
+		t.Fatal()
+	}
+	rb.VirtualFlush()
+	if rb.Length() != 2 {
+		t.Fatal()
+	}
+
+	_, err = rb.VirtualRead(buf)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	if !bytes.Equal(buf, []byte("34")) {
+		t.Fatal()
+	}
+	if rb.Length() != 2 {
+		t.Fatal()
+	}
+	rb.VirtualRevert()
+	if rb.Length() != 2 {
+		t.Fatal()
+	}
+
+}
