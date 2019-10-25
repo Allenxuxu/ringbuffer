@@ -12,7 +12,7 @@ func BenchmarkRingBuffer_Sync(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		rb.Write(data)
-		rb.Read(buf)
+		_, _ = rb.Write(data)
+		_, _ = rb.Read(buf)
 	}
 }
