@@ -41,6 +41,7 @@ func NewWithData(data []byte) *RingBuffer {
 func (r *RingBuffer) RetrieveAll() {
 	r.r = 0
 	r.w = 0
+	r.vr = 0
 	r.isEmpty = true
 }
 
@@ -51,6 +52,7 @@ func (r *RingBuffer) Retrieve(len int) {
 
 	if len < r.Length() {
 		r.r = (r.r + len) % r.size
+		r.vr = r.r
 
 		if r.w == r.r {
 			r.isEmpty = true
@@ -103,15 +105,15 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	return
 }
 
-func (r *RingBuffer) VirtualFlush()  {
+func (r *RingBuffer) VirtualFlush() {
 	r.r = r.vr
 }
 
-func (r *RingBuffer) VirtualRevert()  {
+func (r *RingBuffer) VirtualRevert() {
 	r.vr = r.r
 }
 
-func (r *RingBuffer) VirtualRead (p []byte) (n int, err error)  {
+func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -149,6 +151,22 @@ func (r *RingBuffer) VirtualRead (p []byte) (n int, err error)  {
 		r.isEmpty = true
 	}
 	return
+}
+
+// VirtualLength return the length of available read bytes.
+func (r *RingBuffer) VirtualLength() int {
+	if r.w == r.vr {
+		if r.isEmpty {
+			return 0
+		}
+		return r.size
+	}
+
+	if r.w > r.vr {
+		return r.w - r.vr
+	}
+
+	return r.size - r.vr + r.w
 }
 
 // Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
@@ -223,7 +241,7 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 		return 0, nil
 	}
 	n = len(p)
-	free := r.Free()
+	free := r.free()
 	if free < n {
 		r.makeSpace(n - free)
 	}
@@ -252,7 +270,7 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 
 // WriteByte writes one byte into buffer, and returns ErrIsFull if buffer is full.
 func (r *RingBuffer) WriteByte(c byte) error {
-	if r.Free() < 1 {
+	if r.free() < 1 {
 		r.makeSpace(1)
 	}
 
@@ -289,8 +307,8 @@ func (r *RingBuffer) Capacity() int {
 	return r.size
 }
 
-// Free returns the length of available bytes to write.
-func (r *RingBuffer) Free() int {
+// free returns the length of available bytes to write.
+func (r *RingBuffer) free() int {
 	if r.w == r.r {
 		if r.isEmpty {
 			return r.size
@@ -365,5 +383,5 @@ func (r *RingBuffer) makeSpace(len int) {
 }
 
 func (r *RingBuffer) String() string {
-	return fmt.Sprintf("Ring Buffer: \n\tCap: %d\n\tReadable Bytes: %d\n\tWriteable Bytes: %d\n\tBuffer: %s\n", r.size, r.Length(), r.Free(), r.buf)
+	return fmt.Sprintf("Ring Buffer: \n\tCap: %d\n\tReadable Bytes: %d\n\tWriteable Bytes: %d\n\tBuffer: %s\n", r.size, r.Length(), r.free(), r.buf)
 }

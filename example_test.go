@@ -6,7 +6,7 @@ func ExampleRingBuffer() {
 	rb := New(1024)
 	rb.Write([]byte("abcd"))
 	fmt.Println(rb.Length())
-	fmt.Println(rb.Free())
+	fmt.Println(rb.free())
 	buf := make([]byte, 4)
 
 	rb.Read(buf)
