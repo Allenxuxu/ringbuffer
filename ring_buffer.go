@@ -8,7 +8,7 @@ import (
 
 var ErrIsEmpty = errors.New("ringbuffer is empty")
 
-// RingBuffer is a circular buffer that implement io.ReaderWriter interface.
+// RingBuffer 自动扩容循环缓冲区
 type RingBuffer struct {
 	buf     []byte
 	size    int
@@ -18,7 +18,7 @@ type RingBuffer struct {
 	isEmpty bool
 }
 
-// New returns a new RingBuffer whose buffer has the given size.
+// New 返回一个初始大小为 size 的 RingBuffer
 func New(size int) *RingBuffer {
 	return &RingBuffer{
 		buf:     make([]byte, size),
@@ -83,7 +83,6 @@ func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
 	return
 }
 
-// VirtualLength return the length of available read bytes.
 func (r *RingBuffer) VirtualLength() int {
 	if r.w == r.vr {
 		if r.isEmpty {
@@ -166,9 +165,6 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	return
 }
 
-// Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
-// When Read encounters an error or end-of-file condition after successfully reading n > 0 bytes, it returns the number of bytes read. It may return the (non-nil) error from the same call or return the error (and n == 0) from a subsequent call.
-// Callers should always process the n > 0 bytes returned before considering the error err. Doing so correctly handles I/O errors that happen after reading some bytes and also both of the allowed EOF behaviors.
 func (r *RingBuffer) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
@@ -211,7 +207,6 @@ func (r *RingBuffer) Read(p []byte) (n int, err error) {
 	return
 }
 
-// ReadByte reads and returns the next byte from the input or ErrIsEmpty.
 func (r *RingBuffer) ReadByte() (b byte, err error) {
 	if r.isEmpty {
 		return 0, ErrIsEmpty
@@ -229,10 +224,6 @@ func (r *RingBuffer) ReadByte() (b byte, err error) {
 	return
 }
 
-// Write writes len(p) bytes from p to the underlying buf.
-// It returns the number of bytes written from p (0 <= n <= len(p)) and any error encountered that caused the write to stop early.
-// Write returns a non-nil error if it returns n < len(p).
-// Write must not modify the slice data, even temporarily.
 func (r *RingBuffer) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
@@ -265,7 +256,6 @@ func (r *RingBuffer) Write(p []byte) (n int, err error) {
 	return
 }
 
-// WriteByte writes one byte into buffer, and returns ErrIsFull if buffer is full.
 func (r *RingBuffer) WriteByte(c byte) error {
 	if r.free() < 1 {
 		r.makeSpace(1)
@@ -283,7 +273,6 @@ func (r *RingBuffer) WriteByte(c byte) error {
 	return nil
 }
 
-// Length return the length of available read bytes.
 func (r *RingBuffer) Length() int {
 	if r.w == r.r {
 		if r.isEmpty {
@@ -299,35 +288,17 @@ func (r *RingBuffer) Length() int {
 	return r.size - r.r + r.w
 }
 
-// Capacity returns the size of the underlying buffer.
 func (r *RingBuffer) Capacity() int {
 	return r.size
 }
 
-// free returns the length of available bytes to write.
-func (r *RingBuffer) free() int {
-	if r.w == r.r {
-		if r.isEmpty {
-			return r.size
-		}
-		return 0
-	}
-
-	if r.w < r.r {
-		return r.r - r.w
-	}
-
-	return r.size - r.w + r.r
-}
-
-// WriteString writes the contents of the string s to buffer, which accepts a slice of bytes.
 func (r *RingBuffer) WriteString(s string) (n int, err error) {
 	x := (*[2]uintptr)(unsafe.Pointer(&s))
 	h := [3]uintptr{x[0], x[1], x[1]}
 	return r.Write(*(*[]byte)(unsafe.Pointer(&h)))
 }
 
-// Bytes returns all available read bytes. It does not move the read pointer and only copy the available data.
+// Bytes 返回所有可读数据，此操作不会移动读指针，仅仅是拷贝全部数据
 func (r *RingBuffer) Bytes() (buf []byte) {
 	if r.w == r.r {
 		if !r.isEmpty {
@@ -350,21 +321,22 @@ func (r *RingBuffer) Bytes() (buf []byte) {
 	return
 }
 
-// IsFull returns this ringbuffer is full.
 func (r *RingBuffer) IsFull() bool {
 	return !r.isEmpty && r.w == r.r
 }
 
-// IsEmpty returns this ringbuffer is empty.
 func (r *RingBuffer) IsEmpty() bool {
 	return r.isEmpty
 }
 
-// Reset the read pointer and writer pointer to zero.
 func (r *RingBuffer) Reset() {
 	r.r = 0
 	r.w = 0
 	r.isEmpty = true
+}
+
+func (r *RingBuffer) String() string {
+	return fmt.Sprintf("Ring Buffer: \n\tCap: %d\n\tReadable Bytes: %d\n\tWriteable Bytes: %d\n\tBuffer: %s\n", r.size, r.Length(), r.free(), r.buf)
 }
 
 func (r *RingBuffer) makeSpace(len int) {
@@ -379,6 +351,17 @@ func (r *RingBuffer) makeSpace(len int) {
 	r.buf = newBuf
 }
 
-func (r *RingBuffer) String() string {
-	return fmt.Sprintf("Ring Buffer: \n\tCap: %d\n\tReadable Bytes: %d\n\tWriteable Bytes: %d\n\tBuffer: %s\n", r.size, r.Length(), r.free(), r.buf)
+func (r *RingBuffer) free() int {
+	if r.w == r.r {
+		if r.isEmpty {
+			return r.size
+		}
+		return 0
+	}
+
+	if r.w < r.r {
+		return r.r - r.w
+	}
+
+	return r.size - r.w + r.r
 }
