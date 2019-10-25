@@ -38,6 +38,70 @@ func NewWithData(data []byte) *RingBuffer {
 	}
 }
 
+func (r *RingBuffer) VirtualFlush() {
+	r.r = r.vr
+}
+
+func (r *RingBuffer) VirtualRevert() {
+	r.vr = r.r
+}
+
+func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if r.isEmpty {
+		return 0, ErrIsEmpty
+	}
+	n = len(p)
+	if r.w > r.vr {
+		if n > r.w-r.vr {
+			n = r.w - r.vr
+		}
+		copy(p, r.buf[r.vr:r.vr+n])
+		// move vr
+		r.vr = (r.vr + n) % r.size
+		if r.vr == r.w {
+			r.isEmpty = true
+		}
+		return
+	}
+	if n > r.size-r.vr+r.w {
+		n = r.size - r.vr + r.w
+	}
+	if r.vr+n <= r.size {
+		copy(p, r.buf[r.vr:r.vr+n])
+	} else {
+		// head
+		copy(p, r.buf[r.vr:r.size])
+		// tail
+		copy(p[r.size-r.vr:], r.buf[0:n-r.size+r.vr])
+	}
+
+	// move vr
+	r.vr = (r.vr + n) % r.size
+	if r.vr == r.w {
+		r.isEmpty = true
+	}
+	return
+}
+
+// VirtualLength return the length of available read bytes.
+func (r *RingBuffer) VirtualLength() int {
+	if r.w == r.vr {
+		if r.isEmpty {
+			return 0
+		}
+		return r.size
+	}
+
+	if r.w > r.vr {
+		return r.w - r.vr
+	}
+
+	return r.size - r.vr + r.w
+}
+
 func (r *RingBuffer) RetrieveAll() {
 	r.r = 0
 	r.w = 0
@@ -103,70 +167,6 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	first = r.buf[r.r:r.size]
 	end = r.buf[0:r.w]
 	return
-}
-
-func (r *RingBuffer) VirtualFlush() {
-	r.r = r.vr
-}
-
-func (r *RingBuffer) VirtualRevert() {
-	r.vr = r.r
-}
-
-func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
-	if len(p) == 0 {
-		return 0, nil
-	}
-	if r.isEmpty {
-		return 0, ErrIsEmpty
-	}
-	n = len(p)
-	if r.w > r.vr {
-		if n > r.w-r.vr {
-			n = r.w - r.vr
-		}
-		copy(p, r.buf[r.vr:r.vr+n])
-		// move vr
-		r.vr = (r.vr + n) % r.size
-		if r.vr == r.w {
-			r.isEmpty = true
-		}
-		return
-	}
-	if n > r.size-r.vr+r.w {
-		n = r.size - r.vr + r.w
-	}
-	if r.vr+n <= r.size {
-		copy(p, r.buf[r.vr:r.vr+n])
-	} else {
-		// head
-		copy(p, r.buf[r.vr:r.size])
-		// tail
-		copy(p[r.size-r.vr:], r.buf[0:n-r.size+r.vr])
-	}
-
-	// move vr
-	r.vr = (r.vr + n) % r.size
-	if r.vr == r.w {
-		r.isEmpty = true
-	}
-	return
-}
-
-// VirtualLength return the length of available read bytes.
-func (r *RingBuffer) VirtualLength() int {
-	if r.w == r.vr {
-		if r.isEmpty {
-			return 0
-		}
-		return r.size
-	}
-
-	if r.w > r.vr {
-		return r.w - r.vr
-	}
-
-	return r.size - r.vr + r.w
 }
 
 // Read reads up to len(p) bytes into p. It returns the number of bytes read (0 <= n <= len(p)) and any error encountered. Even if Read returns n < len(p), it may use all of p as scratch space during the call. If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
