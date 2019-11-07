@@ -6,7 +6,8 @@ import (
 	"unsafe"
 )
 
-var ErrIsEmpty = errors.New("ringbuffer is empty")
+// ErrIsEmpty 缓冲区为空
+var ErrIsEmpty = errors.New("ring buffer is empty")
 
 // RingBuffer 自动扩容循环缓冲区
 type RingBuffer struct {
@@ -35,6 +36,8 @@ func NewWithData(data []byte) *RingBuffer {
 	}
 }
 
+// VirtualFlush 刷新虚读指针
+// VirtualXXX 系列配合使用
 func (r *RingBuffer) VirtualFlush() {
 	r.r = r.vr
 	if r.r == r.w {
@@ -42,10 +45,14 @@ func (r *RingBuffer) VirtualFlush() {
 	}
 }
 
+// VirtualRevert 还原虚读指针
+// VirtualXXX 系列配合使用
 func (r *RingBuffer) VirtualRevert() {
 	r.vr = r.r
 }
 
+// VirtualRead 虚读，不移动 read 指针，需要配合 VirtualFlush 和 VirtualRevert 使用
+// VirtualXXX 系列配合使用
 func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
@@ -83,6 +90,8 @@ func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
 	return
 }
 
+// VirtualLength 虚拟长度，虚读后剩余可读数据长度
+// VirtualXXX 系列配合使用
 func (r *RingBuffer) VirtualLength() int {
 	if r.w == r.vr {
 		if r.isEmpty {
