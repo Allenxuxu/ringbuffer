@@ -2,6 +2,13 @@
 
 自动扩容的循环缓冲区实现
 
+[![Github Actions](https://github.com/Allenxuxu/ringbuffer/workflows/CI/badge.svg)](https://github.com/Allenxuxu/ringbuffer/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Allenxuxu/ringbuffer)](https://goreportcard.com/report/github.com/Allenxuxu/ringbuffer)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/eb54ecf0096244d39949843efb895918)](https://www.codacy.com/manual/Allenxuxu/ringbuffer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Allenxuxu/ringbuffer&amp;utm_campaign=Badge_Grade)
+[![GoDoc](https://godoc.org/github.com/Allenxuxu/ringbuffer?status.svg)](https://godoc.org/github.com/Allenxuxu/ringbuffer)
+[![LICENSE](https://img.shields.io/badge/LICENSE-MIT-blue)](https://github.com/Allenxuxu/ringbuffer/blob/master/LICENSE)
+[![Code Size](https://img.shields.io/github/languages/code-size/Allenxuxu/ringbuffer.svg?style=flat)](https://img.shields.io/github/languages/code-size/Allenxuxu/ringbuffer.svg?style=flat)
+
 ## 使用
 
 ```go
