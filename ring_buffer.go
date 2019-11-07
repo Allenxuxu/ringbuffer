@@ -37,6 +37,9 @@ func NewWithData(data []byte) *RingBuffer {
 
 func (r *RingBuffer) VirtualFlush() {
 	r.r = r.vr
+	if r.r == r.w {
+		r.isEmpty = true
+	}
 }
 
 func (r *RingBuffer) VirtualRevert() {
@@ -77,9 +80,6 @@ func (r *RingBuffer) VirtualRead(p []byte) (n int, err error) {
 
 	// move vr
 	r.vr = (r.vr + n) % r.size
-	if r.vr == r.w {
-		r.isEmpty = true
-	}
 	return
 }
 
