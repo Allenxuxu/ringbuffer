@@ -1,6 +1,7 @@
 package ringbuffer
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"unsafe"
@@ -172,6 +173,58 @@ func (r *RingBuffer) PeekAll() (first []byte, end []byte) {
 	first = r.buf[r.r:r.size]
 	end = r.buf[0:r.w]
 	return
+}
+
+func (r *RingBuffer) PeekUint8() uint8 {
+	if r.Length() < 1 {
+		return 0
+	}
+
+	f, e := r.Peek(1)
+	if len(e) > 0 {
+		return e[0]
+	} else {
+		return f[0]
+	}
+}
+
+func (r *RingBuffer) PeekUint16() uint16 {
+	if r.Length() < 2 {
+		return 0
+	}
+
+	f, e := r.Peek(2)
+	if len(e) > 0 {
+		return binary.BigEndian.Uint16(copyByte(f, e))
+	} else {
+		return binary.BigEndian.Uint16(f)
+	}
+}
+
+func (r *RingBuffer) PeekUint32() uint32 {
+	if r.Length() < 4 {
+		return 0
+	}
+
+	f, e := r.Peek(4)
+	if len(e) > 0 {
+		return binary.BigEndian.Uint32(copyByte(f, e))
+	} else {
+		return binary.BigEndian.Uint32(f)
+	}
+}
+
+func (r *RingBuffer) PeekUint64() uint64 {
+	if r.Length() < 8 {
+		return 0
+	}
+
+	f, e := r.Peek(8)
+	if len(e) > 0 {
+		return binary.BigEndian.Uint64(copyByte(f, e))
+	} else {
+		return binary.BigEndian.Uint64(f)
+	}
 }
 
 func (r *RingBuffer) Read(p []byte) (n int, err error) {
@@ -373,4 +426,11 @@ func (r *RingBuffer) free() int {
 	}
 
 	return r.size - r.w + r.r
+}
+
+func copyByte(f, e []byte) []byte {
+	buf := make([]byte, len(f)+len(e))
+	_ = copy(buf, f)
+	_ = copy(buf, e)
+	return buf
 }

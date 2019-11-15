@@ -2,6 +2,7 @@ package ringbuffer
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
 	"strings"
 	"testing"
@@ -581,4 +582,49 @@ func TestRingBuffer_VirtualXXX(t *testing.T) {
 		t.Fatal()
 	}
 
+}
+
+func TestRingBuffer_PeekUintXX(t *testing.T) {
+	rb := New(1024)
+	_ = rb.WriteByte(0x01)
+
+	toWrite := make([]byte, 2)
+	binary.BigEndian.PutUint16(toWrite, 100)
+	_, _ = rb.Write(toWrite)
+
+	toWrite = make([]byte, 4)
+	binary.BigEndian.PutUint32(toWrite, 200)
+	_, _ = rb.Write(toWrite)
+
+	toWrite = make([]byte, 8)
+	binary.BigEndian.PutUint64(toWrite, 300)
+	_, _ = rb.Write(toWrite)
+
+	if rb.Length() != 15 {
+		t.Fatal()
+	}
+
+	v := rb.PeekUint8()
+	if v != 0x01 {
+		t.Fatal()
+	}
+	rb.Retrieve(1)
+
+	v1 := rb.PeekUint16()
+	if v1 != 100 {
+		t.Fatal()
+	}
+	rb.Retrieve(2)
+
+	v2 := rb.PeekUint32()
+	if v2 != 200 {
+		t.Fatal()
+	}
+	rb.Retrieve(4)
+
+	v3 := rb.PeekUint64()
+	if v3 != 300 {
+		t.Fatal(v3)
+	}
+	rb.Retrieve(8)
 }
