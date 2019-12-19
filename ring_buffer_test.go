@@ -628,3 +628,13 @@ func TestRingBuffer_PeekUintXX(t *testing.T) {
 	}
 	rb.Retrieve(8)
 }
+
+func TestCopyBytes(t *testing.T) {
+	f := []byte("1234")
+	e := []byte("abcd")
+
+	out := copyByte(f, e)
+	if !bytes.Equal(out, []byte("1234abcd")) {
+		t.Fatal(string(out))
+	}
+}

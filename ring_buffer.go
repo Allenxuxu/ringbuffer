@@ -431,6 +431,6 @@ func (r *RingBuffer) free() int {
 func copyByte(f, e []byte) []byte {
 	buf := make([]byte, len(f)+len(e))
 	_ = copy(buf, f)
-	_ = copy(buf, e)
+	_ = copy(buf[len(f):], e)
 	return buf
 }
