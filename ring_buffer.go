@@ -362,12 +362,7 @@ func (r *RingBuffer) WriteString(s string) (n int, err error) {
 
 // Bytes 返回所有可读数据，此操作不会移动读指针，仅仅是拷贝全部数据
 func (r *RingBuffer) Bytes() (buf []byte) {
-	if r.w == r.r {
-		if !r.isEmpty {
-			buf := make([]byte, r.size)
-			copy(buf, r.buf)
-			return buf
-		}
+	if r.isEmpty {
 		return
 	}
 

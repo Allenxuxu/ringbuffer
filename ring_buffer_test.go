@@ -638,3 +638,36 @@ func TestCopyBytes(t *testing.T) {
 		t.Fatal(string(out))
 	}
 }
+
+func TestRingBuffer_Bytes(t *testing.T) {
+	var (
+		size = 64
+		ring *RingBuffer
+		n    int
+		err  error
+		data []byte
+	)
+
+	ring = New(size)
+	n, err = ring.Write([]byte(strings.Repeat("abcd", 2)))
+	if n != 8 || err != nil {
+		t.Fatal()
+	}
+	data = make([]byte, 4)
+	n, err = ring.Read(data)
+	if n != 4 || err != nil {
+		t.Fatal()
+	}
+	n, err = ring.Write([]byte(strings.Repeat("efgh", 15)))
+	if n != 60 || err != nil {
+		t.Fatal()
+	}
+	if ring.r != 4 || ring.w != 4 || !ring.IsFull() {
+		t.Fatal()
+	}
+	except := strings.Repeat("abcd", 1) + strings.Repeat("efgh", 15)
+	actual := string(ring.Bytes())
+	if except != actual {
+		t.Fatalf("except %s, but got %s", except, actual)
+	}
+}
