@@ -23,7 +23,7 @@ type RingBuffer struct {
 // New 返回一个初始大小为 size 的 RingBuffer
 func New(size int) *RingBuffer {
 	return &RingBuffer{
-		buf:     make([]byte, size),
+		buf:     make([]byte, size, size),
 		size:    size,
 		isEmpty: true,
 	}
@@ -398,7 +398,7 @@ func (r *RingBuffer) String() string {
 
 func (r *RingBuffer) makeSpace(len int) {
 	newSize := r.size + len
-	newBuf := make([]byte, newSize)
+	newBuf := make([]byte, newSize, newSize)
 	oldLen := r.Length()
 	_, _ = r.Read(newBuf)
 
