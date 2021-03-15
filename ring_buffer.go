@@ -38,6 +38,9 @@ func NewWithData(data []byte) *RingBuffer {
 }
 
 func (r *RingBuffer) WithData(data []byte) {
+	r.r = 0
+	r.w = 0
+	r.isEmpty = false
 	r.size = len(data)
 	r.buf = data
 }
