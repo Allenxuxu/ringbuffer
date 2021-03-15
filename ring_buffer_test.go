@@ -519,7 +519,7 @@ func TestNewWithData(t *testing.T) {
 		t.Fatal()
 	}
 	if rBuf.Length() != 10 {
-		t.Fatal()
+		t.Fatal(rBuf.Length())
 	}
 }
 

@@ -37,6 +37,14 @@ func NewWithData(data []byte) *RingBuffer {
 	}
 }
 
+func (r *RingBuffer) WithData(data []byte) {
+	r.isEmpty = false
+	r.r = 0
+	r.w = len(data)
+	r.size = len(data)
+	r.buf = data
+}
+
 // VirtualFlush 刷新虚读指针
 // VirtualXXX 系列配合使用
 func (r *RingBuffer) VirtualFlush() {
