@@ -407,6 +407,7 @@ func (r *RingBuffer) String() string {
 }
 
 func (r *RingBuffer) makeSpace(len int) {
+	vlen := r.VirtualLength()
 	newSize := r.size + len
 	newBuf := make([]byte, newSize, newSize)
 	oldLen := r.Length()
@@ -414,6 +415,7 @@ func (r *RingBuffer) makeSpace(len int) {
 
 	r.w = oldLen
 	r.r = 0
+	r.vr = oldLen - vlen
 	r.size = newSize
 	r.buf = newBuf
 }
