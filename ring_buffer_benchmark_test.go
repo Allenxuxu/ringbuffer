@@ -16,3 +16,15 @@ func BenchmarkRingBuffer_Sync(b *testing.B) {
 		_, _ = rb.Read(buf)
 	}
 }
+
+func BenchmarkRingBuffer_Grow(b *testing.B) {
+	rb := New(512)
+	data := []byte(strings.Repeat("a", 600))
+	buf := make([]byte, 512)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = rb.Write(data)
+		_, _ = rb.Read(buf)
+	}
+}
