@@ -76,6 +76,39 @@ func main() {
 }
 ```
 
+## 扩容
+
+ringbuffer底层存储结构为golang切片。当ringbuffer需要扩容时，扩容策略参考golang切片append策略:  
+https://github.com/golang/go/blob/ac0ba6707c1655ea4316b41d06571a0303cc60eb/src/runtime/slice.go#L125  
+1. 如果期望容量大于当前容量的两倍就会使用期望容量；
+2. 如果当前切片的长度小于 1024 就会将容量翻倍；
+3. 如果当前切片的长度大于 1024 就会每次增加 25% 的容量，直到新容量大于期望容量；
+
+当调用ringbuffer.Reset()时，buffer将会缩容回初始化时的大小。
+
+```go
+rb := New(2)
+fmt.Println(rb.Length())   // 0
+fmt.Println(rb.Capacity()) // 2
+
+rb.Write([]byte("abc"))
+fmt.Println(rb.Length())   // 3
+fmt.Println(rb.Capacity()) // 4
+
+rb.Write([]byte(strings.Repeat("a", 1024)))
+fmt.Println(rb.Length())   // 1027
+fmt.Println(rb.Capacity()) // 1027
+
+rb.WriteByte('a')
+fmt.Println(rb.Length())   // 1028
+fmt.Println(rb.Capacity()) // 1283
+
+rb.Reset()
+fmt.Println(rb.Length())   // 0
+fmt.Println(rb.Capacity()) // 2
+``` 
+
+
 ## 参考
 
 https://github.com/smallnest/ringbuffer
