@@ -12,28 +12,31 @@ var ErrIsEmpty = errors.New("ring buffer is empty")
 
 // RingBuffer 自动扩容循环缓冲区
 type RingBuffer struct {
-	buf     []byte
-	size    int
-	vr      int
-	r       int // next position to read
-	w       int // next position to write
-	isEmpty bool
+	buf      []byte
+	initSize int
+	size     int
+	vr       int
+	r        int // next position to read
+	w        int // next position to write
+	isEmpty  bool
 }
 
 // New 返回一个初始大小为 size 的 RingBuffer
 func New(size int) *RingBuffer {
 	return &RingBuffer{
-		buf:     make([]byte, size, size),
-		size:    size,
-		isEmpty: true,
+		buf:      make([]byte, size),
+		initSize: size,
+		size:     size,
+		isEmpty:  true,
 	}
 }
 
 // NewWithData 特殊场景使用，RingBuffer 会持有data，不会自己申请内存去拷贝
 func NewWithData(data []byte) *RingBuffer {
 	return &RingBuffer{
-		buf:  data,
-		size: len(data),
+		buf:      data,
+		size:     len(data),
+		initSize: len(data),
 	}
 }
 
@@ -43,6 +46,7 @@ func (r *RingBuffer) WithData(data []byte) {
 	r.vr = 0
 	r.isEmpty = false
 	r.size = len(data)
+	r.initSize = len(data)
 	r.buf = data
 }
 
@@ -400,6 +404,10 @@ func (r *RingBuffer) Reset() {
 	r.vr = 0
 	r.w = 0
 	r.isEmpty = true
+	if r.size > r.initSize {
+		r.buf = make([]byte, r.initSize)
+		r.size = r.initSize
+	}
 }
 
 func (r *RingBuffer) String() string {
@@ -408,8 +416,8 @@ func (r *RingBuffer) String() string {
 
 func (r *RingBuffer) makeSpace(len int) {
 	vlen := r.VirtualLength()
-	newSize := r.size + len
-	newBuf := make([]byte, newSize, newSize)
+	newSize := r.grow(r.size + len)
+	newBuf := make([]byte, newSize)
 	oldLen := r.Length()
 	_, _ = r.Read(newBuf)
 
@@ -427,7 +435,6 @@ func (r *RingBuffer) free() int {
 		}
 		return 0
 	}
-
 	if r.w < r.r {
 		return r.r - r.w
 	}
@@ -440,4 +447,24 @@ func copyByte(f, e []byte) []byte {
 	_ = copy(buf, f)
 	_ = copy(buf[len(f):], e)
 	return buf
+}
+
+func (r *RingBuffer) grow(cap int) int {
+	newcap := r.size
+	doublecap := newcap + newcap
+	if cap > doublecap {
+		newcap = cap
+	} else {
+		if r.size < 1024 {
+			newcap = doublecap
+		} else {
+			for 0 < newcap && newcap < cap {
+				newcap += newcap / 4
+			}
+			if newcap <= 0 {
+				newcap = cap
+			}
+		}
+	}
+	return newcap
 }
